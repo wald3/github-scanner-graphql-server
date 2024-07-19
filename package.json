@@ -1,0 +1,27 @@
+{
+  "name": "github-scrapper",
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18.0"
+  },
+  "scripts": {
+    "compile": "tsc",
+    "start": "npm run compile && ts-node ./dist/index.js",
+    "dev": "ts-node-dev --respawn ./src/index.ts"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.10.4",
+    "@parcel/watcher": "^2.4.0",
+    "graphql": "^16.9.0",
+    "graphql-tag": "^2.12.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.3",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}
