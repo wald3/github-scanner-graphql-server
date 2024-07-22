@@ -8,16 +8,21 @@
   },
   "scripts": {
     "compile": "tsc",
-    "start": "npm run compile && ts-node ./dist/index.js",
-    "dev": "ts-node-dev --respawn ./src/index.ts"
+    "dev": "tsnd --env-file=.env --respawn ./src/index.ts",
+    "generate": "graphql-codegen --watch \"src/schema.graphql\""
   },
   "dependencies": {
+    "@apollo/datasource-rest": "^6.3.0",
     "@apollo/server": "^4.10.4",
     "@parcel/watcher": "^2.4.0",
+    "apollo-server-plugin-response-cache": "^3.8.2",
     "graphql": "^16.9.0",
     "graphql-tag": "^2.12.6"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/typescript": "^4.0.9",
+    "@graphql-codegen/typescript-resolvers": "^4.2.1",
     "@types/jest": "^29.0.3",
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.1",
