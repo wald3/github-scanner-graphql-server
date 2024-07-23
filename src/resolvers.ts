@@ -17,22 +17,26 @@ export const resolvers: Resolvers = {
     },
   },
   Repository: {
-    fileCount: async ({ url }, __, { dataSources }) => {
-      const { fileCount } = await dataSources.githubApi.getRepoFileCount(
-        `${url}/contents`
-      );
-
+    fileCount: async ({ url }, __, { repoDetailsLoader }) => {
+      const { fileCount } = await repoDetailsLoader.load({ url });
       return fileCount;
     },
-    fileContent: async ({ url }, __, { dataSources }) => {
-      const { yamlUrl } = await dataSources.githubApi.getRepoFileCount(
-        `${url}/contents`
-      );
+    fileContent: async ({ url }, __, { repoDetailsLoader, dataSources }) => {
+      const { fileUrl } = await repoDetailsLoader.load({ url });
+      if (!fileUrl) return null;
 
-      const contentBase64 = await dataSources.githubApi.getFileConent(yamlUrl);
-      const content = parseBase64(contentBase64);
+      try {
+        const contentBase64 = await dataSources.githubApi.getFileConent(
+          fileUrl
+        );
+        const content = parseBase64(contentBase64);
 
-      return content;
+        return content;
+      } catch (err) {
+        console.log(`fileContent parseBase64 ${err.message}`);
+
+        return null;
+      }
     },
     webhooks: async ({ owner, name }, __, { dataSources }) => {
       return dataSources.githubApi.getWebhooks(owner.login, name);

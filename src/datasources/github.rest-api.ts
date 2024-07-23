@@ -1,9 +1,11 @@
+import { GraphQLError } from 'graphql';
 import { RepoContentItem, Repository, WebHook } from './../types';
 import {
   AugmentedRequest,
   DataSourceConfig,
   RESTDataSource,
 } from '@apollo/datasource-rest';
+import { RepoDetailsResult } from './../context';
 
 export class GithubApi extends RESTDataSource {
   baseURL = 'https://api.github.com/';
@@ -61,20 +63,20 @@ export class GithubApi extends RESTDataSource {
     }
   }
 
-  async getRepoFileCount(
-    url: string
-  ): Promise<{ fileCount: number; yamlUrl: string | null }> {
+  async getRepoFileCount(url: string): Promise<RepoDetailsResult> {
     try {
       const content = await this.get<RepoContentItem[]>(url);
 
       let fileCount = 0;
-      let fileUrl = null;
+      let fileUrl: string | null = null;
 
       for (const item of content) {
         if (item.type === 'file') {
           if (!fileUrl) {
             const isYamlFile = /\.(yaml|yml)$/i.test(item.name);
-            if (isYamlFile) fileUrl = item.url;
+            if (isYamlFile) {
+              fileUrl = item.url;
+            }
           }
 
           fileCount += 1;
@@ -82,16 +84,17 @@ export class GithubApi extends RESTDataSource {
           const nestedFileCount = await this.getRepoFileCount(item.url);
           fileCount += nestedFileCount.fileCount;
 
-          if (!fileUrl && nestedFileCount.yamlUrl) {
-            fileUrl = nestedFileCount.yamlUrl;
+          if (!fileUrl && nestedFileCount.fileUrl) {
+            fileUrl = nestedFileCount.fileUrl;
           }
         }
       }
 
-      return { fileCount, yamlUrl: fileUrl };
+      return { fileCount, fileUrl };
     } catch (error) {
-      console.error('Error fetching repository contents:', error.message);
-      return { fileCount: -1, yamlUrl: null };
+      throw new GraphQLError(
+        `Error fetching repository contents: ${error.message}`
+      );
     }
   }
 }

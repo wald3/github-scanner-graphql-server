@@ -3,11 +3,11 @@ import { startStandaloneServer } from '@apollo/server/standalone';
 import { readFileSync } from 'fs';
 import { gql } from 'graphql-tag';
 import path from 'path';
-import { ApolloServerPluginUsageReporting } from '@apollo/server/plugin/usageReporting';
 import { GithubApi } from './datasources/github.rest-api';
 import { resolvers } from './resolvers';
 import createQueryLimitPlugin from './plugin';
-import QueryLimitExceededError from './helpers/errors/query-limit-exeeder';
+import DataLoader from 'dataloader';
+import { DataSourceContext } from './context';
 
 console.log({ GH_TOKEN: process.env?.god_token });
 
@@ -20,6 +20,26 @@ const typeDefs = gql(
 const QueryLimitPlugin = createQueryLimitPlugin(
   new Map<string, number>([['repositoryDetails', 1]])
 );
+
+async function batchLoadRepoDetails(
+  keys: readonly { url: string }[],
+  dataSources: DataSourceContext['dataSources']
+) {
+  const uniqueUrls = Array.from(new Set(keys.map((key) => key.url)));
+
+  const results = await Promise.all(
+    uniqueUrls.map(async (url) => {
+      const result = await dataSources.githubApi.getRepoFileCount(
+        `${url}/contents`
+      );
+      return { url, ...result };
+    })
+  );
+
+  const resultMap = new Map(results.map((result) => [result.url, result]));
+
+  return keys.map((key) => resultMap.get(key.url));
+}
 
 async function startApolloServer() {
   const server = new ApolloServer({
@@ -34,14 +54,19 @@ async function startApolloServer() {
       };
     },
   });
+
   const accessToken = process.env?.god_token;
+  const dataSources = {
+    githubApi: new GithubApi(accessToken),
+  };
 
   const { url } = await startStandaloneServer(server, {
     context: async () => {
       return {
-        dataSources: {
-          githubApi: new GithubApi(accessToken),
-        },
+        dataSources,
+        repoDetailsLoader: new DataLoader((keys: readonly { url: string }[]) =>
+          batchLoadRepoDetails(keys, dataSources)
+        ),
       };
     },
   });
