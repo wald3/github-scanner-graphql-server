@@ -1,14 +1,13 @@
 import { ApolloServer } from '@apollo/server';
-import { InMemoryLRUCache } from '@apollo/utils.keyvaluecache';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { ApolloServerPluginCacheControl } from '@apollo/server/plugin/cacheControl';
-
 import { readFileSync } from 'fs';
 import { gql } from 'graphql-tag';
 import path from 'path';
-
+import { ApolloServerPluginUsageReporting } from '@apollo/server/plugin/usageReporting';
 import { GithubApi } from './datasources/github.rest-api';
 import { resolvers } from './resolvers';
+import createQueryLimitPlugin from './plugin';
+import QueryLimitExceededError from './helpers/errors/query-limit-exeeder';
 
 console.log({ GH_TOKEN: process.env?.god_token });
 
@@ -18,17 +17,22 @@ const typeDefs = gql(
   })
 );
 
+const QueryLimitPlugin = createQueryLimitPlugin(
+  new Map<string, number>([['repositoryDetails', 1]])
+);
+
 async function startApolloServer() {
   const server = new ApolloServer({
     typeDefs,
     resolvers,
-    cache: new InMemoryLRUCache({ ttl: 600 }),
-    plugins: [
-      ApolloServerPluginCacheControl({
-        defaultMaxAge: 0,
-        calculateHttpHeaders: true,
-      }),
-    ],
+    plugins: [QueryLimitPlugin],
+    formatError: (err) => {
+      return {
+        message: err.message,
+        code: err.extensions.code,
+        queryName: err.extensions.queryName,
+      };
+    },
   });
   const accessToken = process.env?.god_token;
 
@@ -37,10 +41,6 @@ async function startApolloServer() {
       return {
         dataSources: {
           githubApi: new GithubApi(accessToken),
-          cacheControl: {
-            defaultMaxAge: 0,
-            calculateHttpHeaders: true,
-          },
         },
       };
     },

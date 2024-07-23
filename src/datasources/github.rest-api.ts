@@ -46,6 +46,11 @@ export class GithubApi extends RESTDataSource {
     return this.get<Repository>(`repos/${user}/${repo}`);
   }
 
+  async getFileConent(fileUrl: string): Promise<string> {
+    return (await this.get<Repository & { content: string }>(`${fileUrl}`))
+      .content;
+  }
+
   async getWebhooks(user: string, repo: string): Promise<WebHook[]> {
     try {
       const hooks = await this.get<WebHook[]>(`repos/${user}/${repo}/hooks`);
@@ -63,29 +68,27 @@ export class GithubApi extends RESTDataSource {
       const content = await this.get<RepoContentItem[]>(url);
 
       let fileCount = 0;
-      let yamlUrl = null;
+      let fileUrl = null;
 
       for (const item of content) {
-        if (!yamlUrl) {
-          const isYamlFile = /\.(md)$/i.test(item.name);
-          if (isYamlFile) {
-            yamlUrl = item.url;
-          }
-        }
-
         if (item.type === 'file') {
+          if (!fileUrl) {
+            const isYamlFile = /\.(yaml|yml)$/i.test(item.name);
+            if (isYamlFile) fileUrl = item.url;
+          }
+
           fileCount += 1;
         } else if (item.type === 'dir') {
           const nestedFileCount = await this.getRepoFileCount(item.url);
           fileCount += nestedFileCount.fileCount;
 
-          if (!yamlUrl && nestedFileCount.yamlUrl) {
-            yamlUrl = nestedFileCount.yamlUrl;
+          if (!fileUrl && nestedFileCount.yamlUrl) {
+            fileUrl = nestedFileCount.yamlUrl;
           }
         }
       }
 
-      return { fileCount, yamlUrl };
+      return { fileCount, yamlUrl: fileUrl };
     } catch (error) {
       console.error('Error fetching repository contents:', error.message);
       return { fileCount: -1, yamlUrl: null };

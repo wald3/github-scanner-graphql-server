@@ -1,3 +1,4 @@
+import parseBase64 from './helpers/base64-parser';
 import { Resolvers } from './types';
 
 export const resolvers: Resolvers = {
@@ -17,18 +18,21 @@ export const resolvers: Resolvers = {
   },
   Repository: {
     fileCount: async ({ url }, __, { dataSources }) => {
-      const result = await dataSources.githubApi.getRepoFileCount(
+      const { fileCount } = await dataSources.githubApi.getRepoFileCount(
         `${url}/contents`
       );
 
-      return result.fileCount;
+      return fileCount;
     },
     fileContent: async ({ url }, __, { dataSources }) => {
-      const result = await dataSources.githubApi.getRepoFileCount(
+      const { yamlUrl } = await dataSources.githubApi.getRepoFileCount(
         `${url}/contents`
       );
 
-      return result.yamlUrl;
+      const contentBase64 = await dataSources.githubApi.getFileConent(yamlUrl);
+      const content = parseBase64(contentBase64);
+
+      return content;
     },
     webhooks: async ({ owner, name }, __, { dataSources }) => {
       return dataSources.githubApi.getWebhooks(owner.login, name);
