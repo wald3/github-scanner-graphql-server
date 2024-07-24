@@ -41,7 +41,7 @@ const createQueryLimitPlugin = (queryLimitMap: Map<string, number>) => {
       return {
         async willSendResponse() {
           runningQueries.delete(requestId);
-          console.debug(`Response sent: ${requestId}`);
+          console.debug(`Response sent  : ${requestId}`);
         },
       };
     },

@@ -65,8 +65,8 @@ export class GithubApi extends RESTDataSource {
     try {
       const hooks = await this.get<WebHook[]>(`repos/${user}/${repo}/hooks`);
       return hooks.filter((webhook) => webhook.active === true);
-    } catch (error) {
-      console.error(error.message);
+    } catch (err) {
+      console.error(err.message);
       return [];
     }
   }
