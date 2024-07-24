@@ -1,6 +1,6 @@
 type Query {
-  repositories(pageItems: Int!, page: Int!): [Repository!]
-  repositoryDetails(user: String!, repo: String!): Repository!
+  repositories(pageItems: Int!, page: Int!, token: String!): [Repository!]
+  repositoryDetails(user: String!, repo: String!, token: String!): Repository!
 }
 
 enum CacheControlScope {

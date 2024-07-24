@@ -1,6 +1,6 @@
 import { GraphQLRequestContext, GraphQLRequestListener } from '@apollo/server';
 import { v4 as uuid } from 'uuid';
-import QueryLimitExceededError from './helpers/errors/query-limit-exeeder';
+import QueryLimitExceededError from './errors/query-limit-exeeder';
 
 const runningQueries: Map<string, { query: string; variables: any }> =
   new Map();
@@ -36,12 +36,12 @@ const createQueryLimitPlugin = (queryLimitMap: Map<string, number>) => {
         query: ctx.request.query || '',
         variables: ctx.request.variables || {},
       });
-      console.log(`Request started! ${requestId}`);
+      console.debug(`Request started: ${requestId}`);
 
       return {
         async willSendResponse() {
           runningQueries.delete(requestId);
-          console.log(`Response sent! ${requestId}`);
+          console.debug(`Response sent: ${requestId}`);
         },
       };
     },

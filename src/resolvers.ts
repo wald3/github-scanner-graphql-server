@@ -3,17 +3,17 @@ import { Resolvers } from './types';
 
 export const resolvers: Resolvers = {
   Query: {
-    repositories: async (_, { pageItems, page }, { dataSources }) => {
+    repositories: async (_, { pageItems, page, token }, { dataSources }) => {
       const result = await dataSources.githubApi.getRepositories(
         pageItems,
-        page
+        page,
+        token
       );
-      console.log({ repos: result.length });
-
+      console.debug({ repos: result.length });
       return result;
     },
-    repositoryDetails: (_, { user, repo }, { dataSources }) => {
-      return dataSources.githubApi.getRepositoryDetails(user, repo);
+    repositoryDetails: (_, { user, repo, token }, { dataSources }) => {
+      return dataSources.githubApi.getRepositoryDetails(user, repo, token);
     },
   },
   Repository: {
@@ -33,7 +33,7 @@ export const resolvers: Resolvers = {
 
         return content;
       } catch (err) {
-        console.log(`fileContent parseBase64 ${err.message}`);
+        console.error(`FileContent failed to parse Base64: ${err.message}`);
 
         return null;
       }

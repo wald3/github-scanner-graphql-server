@@ -5,11 +5,9 @@ import { gql } from 'graphql-tag';
 import path from 'path';
 import { GithubApi } from './datasources/github.rest-api';
 import { resolvers } from './resolvers';
-import createQueryLimitPlugin from './plugin';
+import createQueryLimitPlugin from './query-limit-plugin';
 import DataLoader from 'dataloader';
 import { DataSourceContext } from './context';
-
-console.log({ GH_TOKEN: process.env?.god_token });
 
 const typeDefs = gql(
   readFileSync(path.resolve(__dirname, './schema.graphql'), {
@@ -18,7 +16,7 @@ const typeDefs = gql(
 );
 
 const QueryLimitPlugin = createQueryLimitPlugin(
-  new Map<string, number>([['repositoryDetails', 1]])
+  new Map<string, number>([['repositoryDetails', 2]])
 );
 
 async function batchLoadRepoDetails(
@@ -27,18 +25,23 @@ async function batchLoadRepoDetails(
 ) {
   const uniqueUrls = Array.from(new Set(keys.map((key) => key.url)));
 
-  const results = await Promise.all(
-    uniqueUrls.map(async (url) => {
-      const result = await dataSources.githubApi.getRepoFileCount(
-        `${url}/contents`
-      );
-      return { url, ...result };
-    })
-  );
+  try {
+    const results = await Promise.all(
+      uniqueUrls.map(async (url) => {
+        const result = await dataSources.githubApi.getRepoFileCount(
+          `${url}/contents`
+        );
+        return { url, ...result };
+      })
+    );
 
-  const resultMap = new Map(results.map((result) => [result.url, result]));
+    const resultMap = new Map(results.map((result) => [result.url, result]));
 
-  return keys.map((key) => resultMap.get(key.url));
+    return keys.map((key) => resultMap.get(key.url));
+  } catch (err) {
+    console.error(err?.mesage);
+    throw err;
+  }
 }
 
 async function startApolloServer() {
@@ -47,17 +50,13 @@ async function startApolloServer() {
     resolvers,
     plugins: [QueryLimitPlugin],
     formatError: (err) => {
-      return {
-        message: err.message,
-        code: err.extensions.code,
-        queryName: err.extensions.queryName,
-      };
+      console.error(err.message);
+      return err;
     },
   });
 
-  const accessToken = process.env?.god_token;
   const dataSources = {
-    githubApi: new GithubApi(accessToken),
+    githubApi: new GithubApi(),
   };
 
   const { url } = await startStandaloneServer(server, {

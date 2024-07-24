@@ -1,4 +1,4 @@
-# GitHub Scrapper
+# GitHub Scanner
 
 ## Stack
 

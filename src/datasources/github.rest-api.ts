@@ -12,26 +12,23 @@ export class GithubApi extends RESTDataSource {
   accessToken: string;
   requestCount = 0;
 
-  constructor(accessToken?: string, config?: DataSourceConfig) {
-    if (!accessToken) {
-      throw new Error('Can`t create a data source without an access-token!');
-    }
-
+  constructor(config?: DataSourceConfig) {
     super(config);
-    this.accessToken = accessToken;
   }
 
   override willSendRequest(_path: string, request: AugmentedRequest) {
     request.headers['authorization'] = `Bearer ${this.accessToken}`;
     request.headers['Accept'] = 'application/vnd.github+json';
 
-    console.log(`request Id: ${this.requestCount++}`);
+    console.info(`request Id: ${this.requestCount++}`);
   }
 
   async getRepositories(
     pageItems: number,
-    page: number
+    page: number,
+    token: string
   ): Promise<Repository[]> {
+    this.accessToken = token;
     return this.get<Repository[]>(`user/repos`, {
       params: {
         per_page: pageItems.toString(),
@@ -40,7 +37,12 @@ export class GithubApi extends RESTDataSource {
     });
   }
 
-  async getRepositoryDetails(user: string, repo: string): Promise<Repository> {
+  async getRepositoryDetails(
+    user: string,
+    repo: string,
+    token: string
+  ): Promise<Repository> {
+    this.accessToken = token;
     return this.get<Repository>(`repos/${user}/${repo}`);
   }
 
@@ -49,8 +51,14 @@ export class GithubApi extends RESTDataSource {
   }
 
   async getFileConent(fileUrl: string): Promise<string> {
-    return (await this.get<Repository & { content: string }>(`${fileUrl}`))
-      .content;
+    try {
+      const repoDetails = await this.get<Repository & { content: string }>(
+        `${fileUrl}`
+      );
+      return repoDetails.content;
+    } catch (err) {
+      throw new GraphQLError(`Error with repository content: ${err.message}`);
+    }
   }
 
   async getWebhooks(user: string, repo: string): Promise<WebHook[]> {
@@ -91,9 +99,10 @@ export class GithubApi extends RESTDataSource {
       }
 
       return { fileCount, fileUrl };
-    } catch (error) {
+    } catch (err) {
+      if (err instanceof GraphQLError) throw err;
       throw new GraphQLError(
-        `Error fetching repository contents: ${error.message}`
+        `Error while fetching repository details: ${err.message}`
       );
     }
   }
