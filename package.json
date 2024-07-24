@@ -21,6 +21,7 @@
     "dataloader": "^2.2.2",
     "graphql": "^16.9.0",
     "graphql-tag": "^2.12.6",
+    "source-map-support": "^0.5.21",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
